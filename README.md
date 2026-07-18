@@ -47,7 +47,6 @@ The installer checks prerequisites and creates a private config directory at
 
 ```
 open-server/
-├── CLAUDE.md          # notes for AI-assisted development
 ├── README.md          # you are here
 ├── CHANGES.md         # changelog
 ├── LICENCE.md         # license
