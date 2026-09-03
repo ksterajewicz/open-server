@@ -28,7 +28,7 @@ web interface.
 
 ## Requirements
 
-- A POSIX shell environment (Linux or macOS)
+- Linux (only supported platform for now)
 - `ssh` (OpenSSH client)
 
 ## Install
