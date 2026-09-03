@@ -40,22 +40,23 @@ chmod +x install/install.sh
 ./install/install.sh
 ```
 
-The installer checks prerequisites and creates a private config directory at
-`~/.config/open-server/` with a starter `servers.toml` inventory.
+The installer now does the whole user-local setup:
 
-Then install the application itself:
+- creates a private config directory at `~/.config/open-server/` with a starter
+  `servers.toml` inventory,
+- installs the app into `~/.local/share/open-server/.venv`,
+- creates a launcher command at `~/.local/bin/open-server`,
+- creates a desktop entry at `~/.local/share/applications/open-server.desktop`.
 
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -e .
-```
+If `~/.local/bin` is not on your `PATH`, add it and start a new shell session.
 
 ## Usage
 
-Start the dashboard with `open-server`. It opens empty; press <kbd>F2</kbd> to
-pick a server and connect. Every connection becomes its own panel, and the grid
-grows as you add more — several servers (or several sessions to one server)
-stay live side by side.
+Start the dashboard with `open-server`, or launch `open-server` from your
+applications menu. It opens empty; press <kbd>F2</kbd> to pick a server and
+connect. Every connection becomes its own panel, and the grid grows as you add
+more — several servers (or several sessions to one server) stay live side by
+side.
 
 | Key | Action |
 | --- | --- |
@@ -78,7 +79,7 @@ open-server/
 ├── LICENCE.md             # license
 ├── pyproject.toml         # package metadata and dependencies
 ├── install/
-│   └── install.sh         # prerequisite check + config scaffold
+│   └── install.sh         # user-local install: venv, launcher, desktop entry
 ├── src/open_server/
 │   ├── app.py             # the application, screens and key bindings
 │   ├── config.py          # servers.toml inventory (metadata only)
