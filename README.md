@@ -4,8 +4,8 @@ A self-hosted tool for managing SSH connections to multiple servers and working
 across them from one place — so you configure your servers once instead of
 juggling SSH commands by hand.
 
-> **Status:** early development. The installer and project scaffold are in place;
-> the application is being designed. Expect things to change.
+> **Status:** early development, but usable — you can save servers and run
+> several live SSH sessions side by side in one window. Expect things to change.
 
 Made by **Karol Terajewicz** — https://github.com/ksterajewicz/open-server
 
@@ -43,31 +43,69 @@ chmod +x install/install.sh
 The installer checks prerequisites and creates a private config directory at
 `~/.config/open-server/` with a starter `servers.toml` inventory.
 
+Then install the application itself:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e .
+```
+
+## Usage
+
+Start the dashboard with `open-server`. It opens empty; press <kbd>F2</kbd> to
+pick a server and connect. Every connection becomes its own panel, and the grid
+grows as you add more — several servers (or several sessions to one server)
+stay live side by side.
+
+| Key | Action |
+| --- | --- |
+| <kbd>F2</kbd> | Server inventory — connect, add (<kbd>a</kbd>), delete (<kbd>d</kbd>) |
+| <kbd>F4</kbd> | Close the focused panel (ends that SSH session) |
+| <kbd>F6</kbd> | Move focus to the next panel |
+| <kbd>F10</kbd> | Quit (closes every session) |
+
+Everything else goes straight to the shell in the focused panel, so
+<kbd>Tab</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> and friends behave as usual.
+
+Only the focused panel runs a full terminal emulator; background panels keep a
+cheap output view, which is what keeps many open sessions affordable.
+
 ## Project structure
 
 ```
 open-server/
-├── README.md          # you are here
-├── CHANGES.md         # changelog
-├── LICENCE.md         # license
+├── README.md              # you are here
+├── LICENCE.md             # license
+├── pyproject.toml         # package metadata and dependencies
 ├── install/
-│   └── install.sh     # installer
-└── scripts/           # (planned) server management commands
+│   └── install.sh         # prerequisite check + config scaffold
+├── src/open_server/
+│   ├── app.py             # the application, screens and key bindings
+│   ├── config.py          # servers.toml inventory (metadata only)
+│   ├── credentials.py     # ssh-agent / application keys / OS keyring
+│   ├── ssh_session.py     # one ssh process in a PTY, lazy VT100 screen
+│   ├── screens/           # server inventory screens
+│   └── widgets/           # dashboard grid and terminal panels
+└── tests/                 # pytest suite (no live server needed)
 ```
 
 ## Roadmap
 
 - [x] Repo scaffold + installer with welcome banner
-- [ ] Server inventory management (add / list / edit / remove)
-- [ ] Secure credential storage (keyring / ssh-agent)
-- [ ] Multi-terminal TUI dashboard
+- [x] Server inventory management (add / list / delete)
+- [x] Multi-terminal TUI dashboard
+- [x] Keys via `ssh-agent` or a generated application key
+- [ ] In-app flow for saving a passphrase to the OS keyring
+- [ ] Editing existing inventory entries
 - [ ] AI-agent integration (MCP)
 - [ ] Web interface behind an auth layer
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for coding rules and commit message
-guidelines.
+Shell scripts use `set -euo pipefail` and must pass `shellcheck`; Python is
+formatted with `black` and linted with `ruff` (both configured in
+`pyproject.toml`). Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
+Run the test suite with `.venv/bin/pytest` — it needs no live SSH server.
 
 ## License
 
