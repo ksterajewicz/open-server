@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "open-server"
+version = "0.1.0"
+description = "Self-hosted SSH connection manager with a btop-style terminal UI"
+readme = "README.md"
+license = { file = "LICENCE.md" }
+requires-python = ">=3.11"
+authors = [{ name = "Karol Terajewicz" }]
+dependencies = [
+    "textual>=0.60",
+    "tomlkit>=0.12",
+    "keyring>=24.0",
+    "pynacl>=1.5",
+    "cryptography>=42.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ksterajewicz/open-server"
+
+[project.scripts]
+open-server = "open_server.__main__:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "black>=24.0", "ruff>=0.4"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/open_server"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
