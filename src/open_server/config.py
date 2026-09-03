@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import tomlkit
+from tomlkit.exceptions import TOMLKitError
 
 CONFIG_DIR_MODE = 0o700
 SERVERS_FILE_MODE = 0o600
@@ -47,6 +48,11 @@ def config_dir() -> Path:
 
 def servers_file() -> Path:
     return config_dir() / "servers.toml"
+
+
+def settings_file() -> Path:
+    """Application preferences, kept out of the server inventory on purpose."""
+    return config_dir() / "settings.toml"
 
 
 def ensure_config_dir() -> Path:
@@ -115,7 +121,37 @@ def save_servers(entries: list[ServerEntry]) -> None:
         tables.append(table)
     document["server"] = tables
 
+    _write_private(path, tomlkit.dumps(document))
+
+
+def _write_private(path: Path, text: str) -> None:
+    """Replace ``path`` atomically, leaving it readable by the owner only."""
     tmp_path = path.with_name(path.name + ".tmp")
-    tmp_path.write_text(tomlkit.dumps(document), encoding="utf-8")
+    tmp_path.write_text(text, encoding="utf-8")
     tmp_path.chmod(SERVERS_FILE_MODE)
     os.replace(tmp_path, path)
+
+
+def load_settings() -> dict:
+    """Read ``settings.toml``. A missing or unreadable file means "defaults"."""
+    path = settings_file()
+    if not path.exists():
+        return {}
+    try:
+        return dict(tomlkit.parse(path.read_text(encoding="utf-8")))
+    except (OSError, TOMLKitError):
+        # Preferences are never load-bearing: a corrupt file falls back to the
+        # defaults rather than keeping the user out of the application.
+        return {}
+
+
+def save_setting(key: str, value: object) -> None:
+    """Set one preference in ``settings.toml``, keeping everything else."""
+    ensure_config_dir()
+    path = settings_file()
+
+    document = (
+        tomlkit.parse(path.read_text(encoding="utf-8")) if path.exists() else tomlkit.document()
+    )
+    document[key] = value
+    _write_private(path, tomlkit.dumps(document))

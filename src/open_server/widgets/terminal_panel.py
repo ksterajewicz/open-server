@@ -50,13 +50,18 @@ class TerminalPanel(Widget):
 
     can_focus = True
 
+    # Dense by design: a one-cell square border and no padding, so every cell
+    # inside the frame belongs to the remote shell.
     DEFAULT_CSS = """
     TerminalPanel {
-        border: round $primary-background;
-        padding: 0 1;
+        width: 1fr;
+        height: 1fr;
+        border: solid $primary-background;
+        border-title-align: left;
+        padding: 0;
     }
     TerminalPanel:focus {
-        border: round $accent;
+        border: solid $accent;
     }
     """
 
@@ -73,26 +78,35 @@ class TerminalPanel(Widget):
         if not self.session.is_alive() and not self.session.raw_lines():
             return Text("(session ended)", style="dim")
 
-        height = max(self.size.height, 1)
+        # `self.size` is the content area — the frame and padding are already
+        # subtracted — which is exactly the area the PTY is told about, so the
+        # remote screen lines up cell for cell with what is drawn.
+        width, height = self.viewport()
         if self.has_focus:
             lines = self.session.screen_lines()[:height]
         else:
             lines = self.session.raw_lines(height)
-        return Text("\n".join(lines))
+        # Hard-clip: a raw line longer than the panel would wrap and push the
+        # rest of the output down, which looks like a corrupted screen.
+        return Text("\n".join(line[:width] for line in lines), no_wrap=True, overflow="crop")
 
     def on_focus(self) -> None:
         self.session.enable_screen()
-        self._sync_size()
+        self.sync_size()
 
     def on_blur(self) -> None:
         self.session.disable_screen()
 
     def on_resize(self) -> None:
-        self._sync_size()
+        self.sync_size()
 
-    def _sync_size(self) -> None:
-        columns = max(self.size.width, 1)
-        rows = max(self.size.height, 1)
+    def viewport(self) -> tuple[int, int]:
+        """The drawable area in cells, frame and padding already excluded."""
+        return max(self.size.width, 1), max(self.size.height, 1)
+
+    def sync_size(self) -> None:
+        """Tell the PTY the panel's current size, if it has changed."""
+        columns, rows = self.viewport()
         if (columns, rows) != (self.session.columns, self.session.rows):
             self.session.resize(columns, rows)
 

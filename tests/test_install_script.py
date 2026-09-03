@@ -93,3 +93,18 @@ exit 1
 
     assert servers_file.exists()
     assert stat.S_IMODE(servers_file.stat().st_mode) == 0o600
+
+    # The in-app updater works on its own checkout; seeding it here means the
+    # first update is a fetch instead of a surprise clone.
+    checkout = install_root / "repo"
+    assert (checkout / ".git").exists()
+    assert (checkout / "pyproject.toml").exists()
+    origin = subprocess.run(
+        ["git", "-C", str(checkout), "remote", "get-url", "origin"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    # Pointed at the upstream, not at the directory it was copied from.
+    assert "open-server" in origin
+    assert str(repo_root) != origin

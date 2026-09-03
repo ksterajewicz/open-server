@@ -6,15 +6,20 @@ from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
 
 from .config import ServerEntry
+from .credentials import MissingKeyError
+from .screens.keys import GenerateKeyScreen
 from .screens.servers import ServersScreen
+from .screens.update import UpdateScreen
 from .widgets.dashboard import Dashboard
 from .widgets.terminal_panel import TerminalPanel
 
 # Function keys: a focused panel forwards everything else to its shell.
 BINDINGS = [
     ("f2", "servers", "Servers"),
-    ("f4", "close_panel", "Close panel"),
-    ("f6", "next_panel", "Next panel"),
+    ("f4", "close_panel", "Close"),
+    ("f6", "next_panel", "Next"),
+    ("f7", "generate_key", "New key"),
+    ("f9", "update", "Update"),
     ("f10", "quit", "Quit"),
 ]
 
@@ -34,7 +39,9 @@ class OpenServerApp(App):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Dashboard()
-        yield Footer()
+        # Compact, and without the command-palette key: the legend has to fit
+        # a 60-column terminal, which is the narrowest size we support.
+        yield Footer(show_command_palette=False, compact=True)
 
     @property
     def dashboard(self) -> Dashboard:
@@ -50,7 +57,20 @@ class OpenServerApp(App):
         self.push_screen(ServersScreen(), on_result)
 
     async def _connect(self, entry: ServerEntry) -> None:
-        await self.dashboard.add_panel(entry)
+        """Open a panel, turning a missing key file into a message, not a crash."""
+        try:
+            await self.dashboard.add_panel(entry)
+        except MissingKeyError as error:
+            self.notify(str(error), severity="error", timeout=20)
+        except OSError as error:
+            self.notify(f"Could not start ssh for '{entry.name}': {error}", severity="error")
+
+    def action_generate_key(self) -> None:
+        """Create an application key on purpose — nothing else ever creates one."""
+        self.push_screen(GenerateKeyScreen())
+
+    def action_update(self) -> None:
+        self.push_screen(UpdateScreen())
 
     async def action_close_panel(self) -> None:
         panel = self.focused

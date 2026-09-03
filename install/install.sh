@@ -29,6 +29,8 @@ config_dir="$config_home/open-server"
 servers_file="$config_dir/servers.toml"
 install_root="${OPEN_SERVER_DATA_DIR:-$data_home/open-server}"
 venv_dir="$install_root/.venv"
+update_repo_dir="$install_root/repo"
+upstream_url="https://github.com/ksterajewicz/open-server.git"
 bin_dir="${OPEN_SERVER_BIN_DIR:-$HOME/.local/bin}"
 launcher_path="$bin_dir/open-server"
 apps_dir="${OPEN_SERVER_APPS_DIR:-$HOME/.local/share/applications}"
@@ -86,6 +88,42 @@ install_package() {
     info "installed open-server into $venv_dir"
 }
 
+# The app runs from the venv, not from a checkout, so the in-app updater keeps
+# its own checkout here. Seeding it from the local clone means the first update
+# is a plain fetch instead of a surprise clone.
+setup_update_checkout() {
+    if ! command -v git >/dev/null 2>&1; then
+        warn "git not found; the in-app updater will clone $update_repo_dir on first use"
+        return 0
+    fi
+
+    if [[ -d "$update_repo_dir/.git" ]]; then
+        info "$update_repo_dir already exists, leaving it to the updater"
+        return 0
+    fi
+
+    if [[ ! -d "$repo_root/.git" ]]; then
+        warn "$repo_root is not a git checkout; the in-app updater will clone on first use"
+        return 0
+    fi
+
+    mkdir -p "$install_root"
+    if ! git clone --quiet "$repo_root" "$update_repo_dir"; then
+        warn "could not seed $update_repo_dir; the in-app updater will clone on first use"
+        rm -rf "$update_repo_dir"
+        return 0
+    fi
+
+    # Point the seeded checkout at GitHub, not at the directory it was copied
+    # from, or updates would only ever see this machine's local clone.
+    local origin_url="$upstream_url"
+    if git -C "$repo_root" remote get-url origin >/dev/null 2>&1; then
+        origin_url="$(git -C "$repo_root" remote get-url origin)"
+    fi
+    git -C "$update_repo_dir" remote set-url origin "$origin_url"
+    info "seeded updater checkout: $update_repo_dir (origin: $origin_url)"
+}
+
 install_launcher() {
     mkdir -p "$bin_dir"
     cat > "$launcher_path" <<EOF
@@ -136,6 +174,7 @@ main() {
     check_prereqs
     setup_config_dir
     install_package
+    setup_update_checkout
     install_launcher
     install_desktop_entry
     verify_installation
